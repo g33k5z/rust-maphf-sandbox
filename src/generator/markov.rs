@@ -68,10 +68,13 @@ impl MarkovGenerator {
         }
 
         // Determine starting theme (prefer Sideways for a quiet start)
+        let mut available_themes: Vec<_> = budgets.keys().cloned().collect();
+        available_themes.sort();
+
         let mut current_theme = if budgets.get(&MarketTheme::Sideways).cloned().unwrap_or(0) > 0 {
             MarketTheme::Sideways
         } else {
-            *budgets.keys().next().expect("No themes available")
+            *available_themes.first().expect("No themes available")
         };
 
         println!(
@@ -126,7 +129,7 @@ impl MarkovGenerator {
         budgets: &HashMap<MarketTheme, usize>,
         rng: &mut StdRng,
     ) -> MarketTheme {
-        let available_themes: Vec<_> = budgets
+        let mut available_themes: Vec<_> = budgets
             .iter()
             .filter(|&(_, &b)| b > 0)
             .map(|(&t, _)| t)
@@ -135,6 +138,9 @@ impl MarkovGenerator {
         if available_themes.is_empty() {
             return MarketTheme::Sideways;
         }
+
+        // Sort themes to ensure deterministic behavior for reproducibility
+        available_themes.sort();
 
         *available_themes.choose(rng).unwrap()
     }

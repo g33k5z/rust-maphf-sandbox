@@ -12,6 +12,9 @@ pub mod builder;
 pub mod markov;
 pub mod theme;
 
+#[cfg(test)]
+mod tests;
+
 pub use crate::types::MarketTheme;
 pub use builder::{Scenario, ScenarioBuilder};
 pub use markov::MarkovGenerator;

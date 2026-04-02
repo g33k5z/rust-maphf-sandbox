@@ -42,7 +42,7 @@ impl MarketState {
 ///
 /// High-level market behaviors that the `ScenarioBuilder` uses to construct a market story.
 /// These themes map to one or more internal `RegimePhase` definitions in the generator.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum MarketTheme {
     /// Low-to-medium volatility with a steady positive drift.
     Bullish,

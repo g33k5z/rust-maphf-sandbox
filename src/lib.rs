@@ -13,5 +13,8 @@ pub mod generator;
 pub mod io;
 pub mod types;
 
+#[cfg(test)]
+mod tests;
+
 pub use generator::{MarkovGenerator, ScenarioBuilder};
 pub use types::{MarketState, MarketTheme};
