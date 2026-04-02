@@ -1,15 +1,37 @@
+//! # Scenario Configuration API
+//!
+//! This module provides the `ScenarioBuilder` fluent interface, which allows users
+//! to define a "Market Recipe" with total tick counts, theme weights, and segment sizes.
+//!
+//! The builder ensures that the final `Scenario` is logically consistent (e.g., weights sum to 1.0)
+//! before it is passed to the `MarkovGenerator` for execution.
+
 use crate::types::MarketTheme;
 use std::collections::HashMap;
 
+/// # Final Scenario Configuration
+///
+/// An immutable data structure representing a complete "Market Recipe" that
+/// the generator will execute. It encapsulates the total tick budget, theme
+/// percentages, and reproduction parameters.
 #[derive(Debug, Clone)]
 pub struct Scenario {
+    /// Total number of events (ticks) to generate for the entire scenario.
     pub total_ticks: usize,
+    /// Mapping of high-level themes to their desired percentage (0.0 to 1.0).
     pub theme_weights: HashMap<MarketTheme, f64>,
+    /// Global seed used for all random operations in the scenario.
     pub seed: u64,
+    /// Minimum tick count for a single market segment (e.g., 5,000).
     pub min_segment_ticks: usize,
+    /// Maximum tick count for a single market segment (e.g., 20,000).
     pub max_segment_ticks: usize,
 }
 
+/// # Fluent Scenario Builder
+///
+/// A stateful builder that collects the user's requirements and validates them.
+/// This is the primary entry point for a user to configure a new market simulation.
 pub struct ScenarioBuilder {
     total_ticks: usize,
     theme_weights: HashMap<MarketTheme, f64>,
@@ -19,6 +41,10 @@ pub struct ScenarioBuilder {
 }
 
 impl ScenarioBuilder {
+    /// Starts the builder for a fixed number of total ticks.
+    ///
+    /// # Parameters
+    /// - `total_ticks`: The target number of events (e.g., 1,000,000).
     pub fn new(total_ticks: usize) -> Self {
         Self {
             total_ticks,
@@ -29,22 +55,37 @@ impl ScenarioBuilder {
         }
     }
 
+    /// Sets the root seed for the simulation to ensure reproducible output.
     pub fn seed(mut self, seed: u64) -> Self {
         self.seed = Some(seed);
         self
     }
 
+    /// Defines the range for the number of ticks in each randomized market segment.
+    ///
+    /// Smaller segments create more frequent regime changes (more "organic" but noisy),
+    /// while larger segments create longer sustained trends (cleaner "story").
     pub fn segment_range(mut self, min: usize, max: usize) -> Self {
         self.min_segment_ticks = min;
         self.max_segment_ticks = max;
         self
     }
 
+    /// Adds a `MarketTheme` and its corresponding target percentage of total ticks.
+    ///
+    /// # Parameters
+    /// - `theme`: The market behavior to include.
+    /// - `weight`: The fraction (0.0 to 1.0) of `total_ticks` to allot to this theme.
     pub fn add_theme(mut self, theme: MarketTheme, weight: f64) -> Self {
         self.theme_weights.insert(theme, weight);
         self
     }
 
+    /// Validates and constructs the final `Scenario`.
+    ///
+    /// # Returns
+    /// - `Ok(Scenario)`: If the weights sum to 1.0 and at least one theme is provided.
+    /// - `Err(String)`: If the weights are invalid.
     pub fn build(self) -> Result<Scenario, String> {
         if self.theme_weights.is_empty() {
             return Err("At least one theme must be added".to_string());

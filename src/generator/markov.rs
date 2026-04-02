@@ -1,3 +1,14 @@
+//! # Stochastic Data Engine
+//!
+//! This module implements the "Budgeted Markov" generator. It is the heart of the library,
+//! where the high-level themes from a `Scenario` are converted into millions of market events.
+//!
+//! The engine uses a state-machine approach that:
+//! 1.  **Budgets:** Calculates exact tick counts per theme (e.g., 250,000 for Bullish).
+//! 2.  **Transitions:** Uses a stochastic model to pick the next theme based on availability.
+//! 3.  **Executes:** Generates the underlying data using `MarketDataGenerator` while ensuring
+//!     price and time continuity through `MarketState`.
+
 use crate::generator::builder::Scenario;
 use crate::generator::theme::{RegimePhase, ThemeParams};
 use crate::types::{MarketState, MarketTheme};
@@ -7,12 +18,19 @@ use rand::prelude::*;
 use rust_decimal::prelude::*;
 use std::collections::HashMap;
 
+/// # The "Budgeted Markov" Generator
+///
+/// This engine is responsible for executing a `Scenario` by maintaining "Tick Budgets"
+/// for each requested theme and orchestrating the transitions between them.
 pub struct MarkovGenerator {
+    /// The minimum price increment (e.g., 0.25 for S&P 500 futures).
     tick_size: f64,
+    /// The multiplier used to scale prices in the final `Event` struct.
     price_scale: f64,
 }
 
 impl MarkovGenerator {
+    /// Creates a new generator instance for the specified market instrument parameters.
     pub fn new(tick_size: f64, price_scale: f64) -> Self {
         Self {
             tick_size,
@@ -20,27 +38,37 @@ impl MarkovGenerator {
         }
     }
 
+    /// Generates a complete market scenario based on the provided recipe and state.
+    ///
+    /// This is the main simulation loop that:
+    /// - Initializes budgets for all themes.
+    /// - Iteratively picks a theme, generates a segment of random length, and decrements its budget.
+    /// - Repeats until the total requested ticks (e.g., 1,000,000) are generated.
+    ///
+    /// # Parameters
+    /// - `scenario`: The configuration (total ticks, weights, seed) to execute.
+    /// - `state`: The initial market state, which is updated with the final price/time.
     pub fn generate(&self, scenario: &Scenario, state: &mut MarketState) -> Vec<Event> {
         let mut rng = StdRng::seed_from_u64(scenario.seed);
         let mut all_events = Vec::with_capacity(scenario.total_ticks);
         let mut remaining_ticks = scenario.total_ticks;
 
-        // Initialize budgets per theme
+        // Initialize budgets per theme (converts percentages to counts)
         let mut budgets: HashMap<MarketTheme, usize> = scenario
             .theme_weights
             .iter()
             .map(|(&t, &w)| (t, (scenario.total_ticks as f64 * w) as usize))
             .collect();
 
-        // Adjust for rounding to ensure sum matches exactly
+        // Adjust for rounding to ensure sum matches exactly (adds residual to first theme)
         let budget_sum: usize = budgets.values().sum();
         if budget_sum < scenario.total_ticks {
             let first_theme = *scenario.theme_weights.keys().next().unwrap();
             *budgets.get_mut(&first_theme).unwrap() += scenario.total_ticks - budget_sum;
         }
 
-        // Current theme (start with Sideways if available, otherwise any)
-        let mut current_theme = if budgets.contains_key(&MarketTheme::Sideways) {
+        // Determine starting theme (prefer Sideways for a quiet start)
+        let mut current_theme = if budgets.get(&MarketTheme::Sideways).cloned().unwrap_or(0) > 0 {
             MarketTheme::Sideways
         } else {
             *budgets.keys().next().expect("No themes available")
@@ -52,10 +80,9 @@ impl MarkovGenerator {
         );
 
         while remaining_ticks > 0 {
-            // Determine segment length
+            // Determine segment length (randomized for more "organic" feel)
             let max_possible = budgets.get(&current_theme).cloned().unwrap_or(0);
             if max_possible == 0 {
-                // Theme budget exhausted, pick a new one
                 current_theme = self.pick_next_theme(&budgets, &mut rng);
                 continue;
             }
@@ -68,7 +95,7 @@ impl MarkovGenerator {
                 break;
             }
 
-            // Generate events for the theme
+            // Delegate to the theme-specific event generation (handles multi-phase sequences)
             let theme_events = self.generate_theme_events(state, current_theme, segment_len);
 
             println!(
@@ -83,13 +110,17 @@ impl MarkovGenerator {
             remaining_ticks -= actual_len;
             *budgets.get_mut(&current_theme).unwrap() -= actual_len;
 
-            // Transition to next theme
+            // Roll for the next theme among those with remaining budget
             current_theme = self.pick_next_theme(&budgets, &mut rng);
         }
 
         all_events
     }
 
+    /// Selects the next market theme based on availability of the remaining budget.
+    ///
+    /// This provides the "Markov" behavior by switching between available regimes
+    /// in a way that avoids predictable, giant blocks of a single theme.
     fn pick_next_theme(
         &self,
         budgets: &HashMap<MarketTheme, usize>,
@@ -102,13 +133,17 @@ impl MarkovGenerator {
             .collect();
 
         if available_themes.is_empty() {
-            return MarketTheme::Sideways; // Should not happen given logic
+            return MarketTheme::Sideways;
         }
 
-        // Uniform selection among available for simplicity (Budgeted Markov)
         *available_themes.choose(rng).unwrap()
     }
 
+    /// Generates events for a specific high-level theme, potentially through multiple phases.
+    ///
+    /// If a theme is a `Sequence` (like `FlashCrash`), this method divides the total
+    /// segment length among its component phases (e.g., Plunge and Snapback)
+    /// and generates each part in order to maintain the expected "shape."
     fn generate_theme_events(
         &self,
         state: &mut MarketState,
@@ -142,6 +177,11 @@ impl MarkovGenerator {
         }
     }
 
+    /// Performs the lowest-level market data generation for a single, uniform segment.
+    ///
+    /// This method configures the underlying `MarketDataGenerator` and converts its
+    /// output into the `Event` format required by `hftbacktest`. It is here that
+    /// rounding to `tick_size` and time continuity (increments) are enforced.
     fn generate_raw_segment(
         &self,
         state: &mut MarketState,
@@ -151,6 +191,7 @@ impl MarkovGenerator {
         let segment_seed = state.base_seed + state.segment_count;
         state.segment_count += 1;
 
+        // Configure the core stochastic generator
         let config = ConfigBuilder::new()
             .starting_price_f64(state.last_price)
             .volatility_f64(params.volatility)
@@ -177,13 +218,14 @@ impl MarkovGenerator {
                 SELL_EVENT
             };
 
+            // Increment time and update price for the next tick
             current_last_ts += 1;
             current_last_price = rounded_px;
 
             events.push(Event {
                 ev: TRADE_EVENT | EXCH_EVENT | LOCAL_EVENT | side_flag,
-                exch_ts: current_last_ts * 1_000_000,
-                local_ts: (current_last_ts + 1) * 1_000_000,
+                exch_ts: current_last_ts * 1_000_000, // nanoseconds
+                local_ts: (current_last_ts + 1) * 1_000_000, // 1ms simulated latency
                 px: rounded_px * self.price_scale,
                 qty: t.volume.value as f64,
                 order_id: 0,
@@ -192,6 +234,7 @@ impl MarkovGenerator {
             });
         }
 
+        // Update the global state so the next segment starts exactly where this one ended
         state.last_price = current_last_price;
         state.last_timestamp_ms = current_last_ts;
 

@@ -1,8 +1,27 @@
+//! # Market Data Sandbox CLI
+//!
+//! This is the primary entry point for the market data generation tool.
+//! It utilizes the library's `ScenarioBuilder` and `MarkovGenerator` to create
+//! large-scale, high-frequency market data in multiple file formats.
+//!
+//! Example usage:
+//! 1. Configure the scenario with themes (Bullish, FlashCrash, etc.).
+//! 2. Generate exactly 1,000,000 events based on the desired percentages.
+//! 3. Save to output/data/ in CSV, NPZ, and BIN formats.
+
 use rust_maphf_sandbox::generator::{MarketTheme, MarkovGenerator, ScenarioBuilder};
 use rust_maphf_sandbox::io::{save_as_bin, save_as_csv, save_as_npz};
 use rust_maphf_sandbox::types::MarketState;
 use std::fs::create_dir_all;
 
+/// Main entry point for the simulation.
+///
+/// This function:
+/// 1. Initializes the output directory.
+/// 2. Defines the simulation parameters (tick size, price scale, total ticks).
+/// 3. Builds a `Scenario` with specific market themes and weights.
+/// 4. Executes the `MarkovGenerator` to produce a high-frequency time series.
+/// 5. Saves the final event list to multiple files.
 fn main() -> std::io::Result<()> {
     create_dir_all("output/data")?;
 
@@ -10,20 +29,23 @@ fn main() -> std::io::Result<()> {
     let price_scale = 1.0;
     let total_ticks = 1_000_000;
 
+    // Fluent "Modern 2026" Builder API:
+    // Defining the Market "Recipe" for exactly 1,000,000 events
     let scenario = ScenarioBuilder::new(total_ticks)
         .seed(42)
         .segment_range(5_000, 20_000)
-        .add_theme(MarketTheme::Bullish, 0.25) // 25% Bullish
-        .add_theme(MarketTheme::Sideways, 0.50) // 50% Sideways
-        .add_theme(MarketTheme::FlashCrash, 0.10) // 10% V-Shape Recovery
-        .add_theme(MarketTheme::Correction, 0.15) // 15% U-Shape Recovery
+        .add_theme(MarketTheme::Bullish, 0.25) // 25% of time is upward drift
+        .add_theme(MarketTheme::Sideways, 0.50) // 50% of time is consolidation
+        .add_theme(MarketTheme::FlashCrash, 0.10) // 10% of time is spent in sharp V-shapes
+        .add_theme(MarketTheme::Correction, 0.15) // 15% of time is spent in U-shape corrections
         .build()
         .expect("Failed to build scenario");
 
-    // Continuity state: $5000 price, starting at Unix epoch (Jan 1, 2023)
+    // Continuity state: Starting at $5,000 price on Jan 1, 2023
     let mut state = MarketState::new(5000.0, 1672531200000, scenario.seed);
 
-    // Budgeted Markov Engine
+    // Budgeted Markov Engine:
+    // Orchestrates the transitions between themes to meet the desired percentages
     let generator = MarkovGenerator::new(tick_size, price_scale);
 
     println!(

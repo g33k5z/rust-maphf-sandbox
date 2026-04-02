@@ -1,9 +1,20 @@
+//! # Multi-format Data Serializers
+//!
+//! This module provides utilities to save the generated `Event` data in formats
+//! compatible with `hftbacktest` (NPZ/CSV) and custom Rust consumers (BIN).
+//!
+//! Each function handles the low-level serialization logic for its respective format.
+
 use hftbacktest::types::Event;
 use std::fs::File;
 use std::io::Write;
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
 
+/// # CSV Serializer
+///
+/// Saves the events as a human-readable, comma-separated values file.
+/// Primarily used for manual inspection and debugging.
 pub fn save_as_csv(events: &[Event], filename: &str) -> std::io::Result<()> {
     let mut file = File::create(filename)?;
     writeln!(file, "ev,exch_ts,local_ts,px,qty,order_id,ival,fval")?;
@@ -17,6 +28,11 @@ pub fn save_as_csv(events: &[Event], filename: &str) -> std::io::Result<()> {
     Ok(())
 }
 
+/// # NPZ (Numpy Zip) Serializer
+///
+/// Saves the events in a format compatible with `hftbacktest`'s Python environment.
+/// This function constructs a `.npz` file containing a `.npy` file with a specific
+/// structured data header that matches the `Event` struct's memory layout.
 pub fn save_as_npz(events: &[Event], filename: &str) -> std::io::Result<()> {
     let file = File::create(filename)?;
     let mut zip = ZipWriter::new(file);
@@ -27,6 +43,7 @@ pub fn save_as_npz(events: &[Event], filename: &str) -> std::io::Result<()> {
 
     zip.start_file("data.npy", options)?;
 
+    // Define the Numpy structured array header to match hftbacktest's Event layout
     let header = format!(
         "{{'descr': [('ev', '<u8'), ('exch_ts', '<i8'), ('local_ts', '<i8'), ('px', '<f8'), ('qty', '<f8'), ('order_id', '<u8'), ('ival', '<i8'), ('fval', '<f8')], 'fortran_order': False, 'shape': ({},)}}",
         events.len()
@@ -44,6 +61,7 @@ pub fn save_as_npz(events: &[Event], filename: &str) -> std::io::Result<()> {
     zip.write_all(&header_len.to_le_bytes())?;
     zip.write_all(&header_bytes)?;
 
+    // Serialize each event's fields in little-endian order
     for ev in events {
         zip.write_all(&ev.ev.to_le_bytes())?;
         zip.write_all(&ev.exch_ts.to_le_bytes())?;
@@ -59,6 +77,10 @@ pub fn save_as_npz(events: &[Event], filename: &str) -> std::io::Result<()> {
     Ok(())
 }
 
+/// # Raw Binary Serializer
+///
+/// Saves the events as a raw byte buffer (little-endian).
+/// This is the most efficient format for loading back into the Rust environment.
 pub fn save_as_bin(events: &[Event], filename: &str) -> std::io::Result<()> {
     let mut file = File::create(filename)?;
     for ev in events {
