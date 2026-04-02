@@ -44,5 +44,10 @@ Each row in the `.npz` files follows this exact schema to ensure compatibility w
 
 #### Generated Files
 Located in `output/data/`:
-- **`mes_normal.npz`**: 100,000 normal market ticks (Bullish trend, $0.5\%$ volatility).
-- **`mes_flash_crash.npz`**: 50,000 stress events (Bearish trend, $5\%$ volatility).
+- **`mes_chained_reproducible.npz`**: A composite market scenario consisting of five distinct segments:
+  1. **Morning Bull Run** (Bullish, low vol)
+  2. **Noon Consolidation** (Sideways, very low vol)
+  3. **Flash Crash** (Bearish, high vol)
+  4. **V-Shape Recovery** (Bullish, high vol)
+  5. **Afternoon Sell-off** (Bearish, moderate vol)
+- **Reproducibility**: Entire sequences can be recreated by providing the same `base_seed`, ensuring consistent testing across multiple runs.
