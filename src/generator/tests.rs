@@ -44,7 +44,7 @@ fn test_markov_generator_total_ticks() {
         .unwrap();
 
     let mut state = MarketState::new(5000.0, 1000000, 123);
-    let generator = MarkovGenerator::new(0.25, 1.0);
+    let generator = MarkovGenerator::new(0.25, 100.0);
     let events = generator.generate(&scenario, &mut state);
 
     assert_eq!(events.len(), total_ticks);

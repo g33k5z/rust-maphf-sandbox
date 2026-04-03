@@ -12,7 +12,7 @@
 use crate::generator::builder::Scenario;
 use crate::generator::theme::{RegimePhase, ThemeParams};
 use crate::types::{MarketState, MarketTheme};
-use hftbacktest::types::{BUY_EVENT, EXCH_EVENT, Event, LOCAL_EVENT, SELL_EVENT, TRADE_EVENT};
+use hftbacktest::types::{Event, BUY_EVENT, EXCH_EVENT, LOCAL_EVENT, SELL_EVENT, TRADE_EVENT};
 use market_data_source::{ConfigBuilder, MarketDataGenerator};
 use rand::prelude::*;
 use rust_decimal::prelude::*;
@@ -107,10 +107,11 @@ impl MarkovGenerator {
             let theme_events = self.generate_theme_events(state, current_theme, segment_len);
 
             println!(
-                " - [{:?}] generated {} ticks ({} remaining for theme)",
+                " - [{:?}] generated {} ticks ({} remaining for theme). Final Px: {:.2}",
                 current_theme,
                 theme_events.len(),
-                budgets[&current_theme] - theme_events.len()
+                budgets[&current_theme] - theme_events.len(),
+                state.last_price
             );
 
             let actual_len = theme_events.len();

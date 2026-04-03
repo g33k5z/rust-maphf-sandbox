@@ -21,7 +21,7 @@ fn test_end_to_end_pipeline() {
 
     let total_ticks = 50_000;
     let tick_size = 0.25;
-    let price_scale = 1.0;
+    let price_scale = 100.0;
     let seed = 12345;
 
     // 1. Build a complex scenario using the public Builder API

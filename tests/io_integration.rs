@@ -22,7 +22,7 @@ fn test_io_serializers_creation() {
         .unwrap();
 
     let mut state = MarketState::new(5000.0, 1000000, 42);
-    let generator = MarkovGenerator::new(0.25, 1.0);
+    let generator = MarkovGenerator::new(0.25, 100.0);
     let events = generator.generate(&scenario, &mut state);
 
     let csv_file = format!("{}/test.csv", output_dir);

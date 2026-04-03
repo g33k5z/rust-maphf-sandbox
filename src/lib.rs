@@ -10,6 +10,7 @@
 //! - `io`: Multi-format serializers for integration with Rust and Python environments.
 
 pub mod generator;
+pub mod hft;
 pub mod io;
 pub mod types;
 
@@ -17,4 +18,5 @@ pub mod types;
 mod tests;
 
 pub use generator::{MarkovGenerator, ScenarioBuilder};
+pub use hft::BacktestSessionBuilder;
 pub use types::{MarketState, MarketTheme};

@@ -5,10 +5,10 @@ edition = "2024"
 
 [dependencies]
 market-data-source = "0.3"
-hftbacktest = "0.9"
 rust_decimal = "1.36"
 rust_decimal_macros = "1.36"
 zip = "2.2.0"
 rand = "0.8"
 chrono = "0.4"
+hftbacktest = "0.9.4"
 

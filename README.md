@@ -7,10 +7,10 @@ We will use market data generation as a case study to illustrate the application
 in the context of high-frequency trading (HFT) backtesting. The generated data will be structured to meet the requirements 
 of the `hftbacktest` engine, which expects a specific format for tick data.
 
-- [Hipster Ipsum](https://hipsum.co/) some tick data (`market-data-source`)
+- [Hipster Ipsum](https://hipsum.co/) some tick data ([market-data-source](https://github.com/destenson/market-data-source))
     - Chain in stress events (flash crash) and volatility wobbles
     - Format the data according to `hftbacktest`'s schema (flat, normalized version of CME Core Message Specifications (MDP 3.0))
-- Replay (`hftbacktest`)
+- Replay ([hftbacktest](https://github.com/nkaz001/hftbacktest))
     - hftbacktest's built-in metrics and visualization tools?
 - Kitchen sink statisitcal analysis
     - Start with descriptive, then move to inferential, and finally predictive statistics
