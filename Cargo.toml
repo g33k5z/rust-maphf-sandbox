@@ -10,4 +10,5 @@ rust_decimal = "1.36"
 rust_decimal_macros = "1.36"
 zip = "2.2.0"
 rand = "0.8"
+chrono = "0.4"
 

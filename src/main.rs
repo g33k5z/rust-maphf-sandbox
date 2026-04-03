@@ -29,8 +29,7 @@ fn main() -> std::io::Result<()> {
     let price_scale = 1.0;
     let total_ticks = 1_000_000;
 
-    // Fluent "Modern 2026" Builder API:
-    // Defining the Market "Recipe" for exactly 1,000,000 events
+    // Defining the Market
     let scenario = ScenarioBuilder::new(total_ticks)
         .seed(42)
         .segment_range(5_000, 20_000)
@@ -41,8 +40,8 @@ fn main() -> std::io::Result<()> {
         .build()
         .expect("Failed to build scenario");
 
-    // Continuity state: Starting at $5,000 price on Jan 1, 2023
-    let mut state = MarketState::new(5000.0, 1672531200000, scenario.seed);
+    // Continuity state
+    let mut state = MarketState::at_date(2023, 1, 1, 5000.0, scenario.seed);
 
     // Budgeted Markov Engine:
     // Orchestrates the transitions between themes to meet the desired percentages

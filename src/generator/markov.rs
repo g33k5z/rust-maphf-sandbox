@@ -12,7 +12,7 @@
 use crate::generator::builder::Scenario;
 use crate::generator::theme::{RegimePhase, ThemeParams};
 use crate::types::{MarketState, MarketTheme};
-use hftbacktest::types::{Event, BUY_EVENT, EXCH_EVENT, LOCAL_EVENT, SELL_EVENT, TRADE_EVENT};
+use hftbacktest::types::{BUY_EVENT, EXCH_EVENT, Event, LOCAL_EVENT, SELL_EVENT, TRADE_EVENT};
 use market_data_source::{ConfigBuilder, MarketDataGenerator};
 use rand::prelude::*;
 use rust_decimal::prelude::*;
@@ -68,6 +68,11 @@ impl MarkovGenerator {
         }
 
         // Determine starting theme (prefer Sideways for a quiet start)
+        //
+        // The choice to prefer a Sideways start in the MarkovGenerator is a standard practice in market simulation and backtesting for three main reasons:
+        //  1.  Strategy "Warm-up": High-frequency trading (HFT) strategies and technical indicators (like Moving Averages, RSI, or Volatility estimators) often require a window of data to "prime" their internal state. Starting with a stable, low-volatility period allows these algorithms to settle before encountering aggressive trends or "Black Swan" events like a FlashCrash.
+        //  2.  Initial Price Stability: Since the simulation starts at a user-defined initial_price, starting sideways ensures that the very first few thousand ticks establish a solid "baseline" price. If the simulation started immediately with a FlashCrash or a high-momentum Bullish run, the strategy might trigger extreme entry orders before it has even established what "normal" market behavior looks like.
+        //  3.  Order Book Baseline: In hftbacktest, the simulator needs to process some initial trades to build a realistic picture of the recent price action. A "quiet start" mimics a period of price discovery or a calm market opening, which is generally safer for testing the basic health of a trading bot.
         let mut available_themes: Vec<_> = budgets.keys().cloned().collect();
         available_themes.sort();
 
