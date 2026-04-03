@@ -13,9 +13,7 @@ pub mod generator;
 pub mod hft;
 pub mod io;
 pub mod types;
-
-#[cfg(test)]
-mod tests;
+pub mod ui;
 
 pub use generator::{MarkovGenerator, ScenarioBuilder};
 pub use hft::BacktestSessionBuilder;

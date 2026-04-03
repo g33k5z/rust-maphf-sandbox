@@ -9,10 +9,10 @@
 //! 2. Generate exactly 1,000,000 events based on the desired percentages.
 //! 3. Save to output/data/ in CSV, NPZ, and BIN formats.
 
-use rust_maphf_sandbox::BacktestSessionBuilder;
 use rust_maphf_sandbox::generator::{MarketTheme, MarkovGenerator, ScenarioBuilder};
-use rust_maphf_sandbox::io::save_as_npz; //save_as_bin, save_as_csv
 use rust_maphf_sandbox::types::MarketState;
+use rust_maphf_sandbox::ui;
+use rust_maphf_sandbox::BacktestSessionBuilder;
 use std::fs::create_dir_all;
 
 /// Main entry point for the simulation.
@@ -26,82 +26,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Defining the Market
     let scenario = ScenarioBuilder::new(total_ticks)
         .seed(67)
-        .segment_range(5_000, 20_000)
-        .add_theme(MarketTheme::Bullish, 0.25) // 25% of time is upward drift
-        .add_theme(MarketTheme::Sideways, 0.50) // 50% of time is consolidation
-        .add_theme(MarketTheme::FlashCrash, 0.10) // 10% of time is spent in sharp V-shapes
-        .add_theme(MarketTheme::Correction, 0.15) // 15% of time is spent in U-shape corrections
+        .segment_range(5_000, 1_000_000)
+        .add_theme(MarketTheme::Bullish, 0.25)
+        .add_theme(MarketTheme::Sideways, 0.50)
+        .add_theme(MarketTheme::FlashCrash, 0.10)
+        .add_theme(MarketTheme::Correction, 0.15)
         .build()
         .expect("Failed to build scenario");
 
     // Continuity state
-    let mut state = MarketState::at_date(2023, 1, 1, 5000.0, scenario.seed);
+    let mut state = MarketState::at_date(2069, 4, 20, 5000.0, scenario.seed);
 
-    // Budgeted Markov Engine:
-    // Orchestrates the transitions between themes to meet the desired percentages
+    // Budgeted Markov Engine
     let generator = MarkovGenerator::new(tick_size, price_scale);
 
-    println!(
-        "Generating {} ticks using Theme-based Budgeted Markov approach...",
-        total_ticks
-    );
+    ui::print_generation_start(total_ticks);
     let all_events = generator.generate(&scenario, &mut state);
 
-    println!("Saving data to multiple formats (CSV, NPZ, BIN)...");
-    for i in 0..5.min(all_events.len()) {
-        println!(
-            " - Event {}: px={:.2}, exch_ts={}, local_ts={}",
-            i, all_events[i].px, all_events[i].exch_ts, all_events[i].local_ts
-        );
-    }
+    // ui::print_event_preview(&all_events);
+    ui::print_generation_summary(all_events.len());
 
-    println!("...and the last 5 events:");
-    for i in (all_events.len() - 5)..all_events.len() {
-        println!(
-            " - Event {}: px={:.2}, exch_ts={}, local_ts={}",
-            i, all_events[i].px, all_events[i].exch_ts, all_events[i].local_ts
-        );
-    }
-
-    // save_as_npz(&all_events, "output/data/mes_1m_dynamic.npz")?;
-
-    println!(
-        "Successfully generated and saved {} total events.",
-        all_events.len()
-    );
-
-    println!("\nInitializing hftbacktest session using Fluent API (NPZ)...");
+    ui::print_backtest_init();
     let mut backtest = BacktestSessionBuilder::new()
         .tick_size(tick_size * price_scale)
         .contract_size(5.0 / price_scale)
-        .load_events(&all_events) // or from file .load_npz("output/data/mes_1m_dynamic.npz")
+        .load_events(&all_events)
         .build()?;
 
-    println!("Running backtest simulation (Trade-only)...");
+    ui::print_backtest_start();
 
-    use hftbacktest::depth::MarketDepth;
-    use hftbacktest::prelude::Bot;
     // Advance backtest until end of data
     let result = backtest.goto_end();
-    println!("Backtest complete with result: {:?}", result);
+    ui::print_backtest_complete(result.unwrap());
 
-    let last_price = backtest.depth(0).best_bid();
-    if last_price.is_nan() {
-        if let Some(last_trade) = backtest.last_trades(0).last() {
-            println!("Final Last Trade Price: {:.2}", last_trade.px);
-            println!(
-                "Final Last Trade Price (bits): 0x{:x}",
-                last_trade.px.to_bits()
-            );
-            println!("Final Last Trade Qty: {:.2}", last_trade.qty);
-            println!("Final Last Trade ev: 0x{:x}", last_trade.ev);
-            println!("Total Tades: {}", backtest.last_trades(0).len());
-        } else {
-            println!("No trades processed.");
-        }
-    } else {
-        println!("Final Best Bid: {:.2}", last_price);
-    }
+    ui::print_backtest_results(&backtest);
 
     Ok(())
 }
