@@ -5,6 +5,8 @@
 //! the underlying engine with sensible defaults for synthetic data.
 
 pub mod loader;
+#[cfg(test)]
+mod tests;
 
 use crate::hft::loader::{load_from_bin, load_from_npz};
 use hftbacktest::backtest::assettype::LinearAsset;
