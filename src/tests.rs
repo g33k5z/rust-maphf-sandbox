@@ -19,6 +19,17 @@ fn test_market_state_initialization() {
     assert_eq!(state.segment_count, 0);
 }
 
+/// Verifies that `MarketState::at_date` correctly converts a date to the correct epoch milliseconds.
+#[test]
+fn test_market_state_at_date() {
+    let price = 5000.0;
+    let seed = 42;
+    let state = MarketState::at_date(2023, 1, 1, price, seed);
+
+    assert_eq!(state.last_price, price);
+    assert_eq!(state.last_timestamp_ms, 1672531200000);
+}
+
 /// Ensures that different `MarketTheme` variants are not considered equal.
 #[test]
 fn test_market_theme_uniqueness() {

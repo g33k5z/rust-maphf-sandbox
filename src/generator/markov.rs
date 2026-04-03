@@ -68,6 +68,11 @@ impl MarkovGenerator {
         }
 
         // Determine starting theme (prefer Sideways for a quiet start)
+        //
+        // The choice to prefer a Sideways start in the MarkovGenerator is a standard practice in market simulation and backtesting for three main reasons:
+        //  1.  Strategy "Warm-up": High-frequency trading (HFT) strategies and technical indicators (like Moving Averages, RSI, or Volatility estimators) often require a window of data to "prime" their internal state. Starting with a stable, low-volatility period allows these algorithms to settle before encountering aggressive trends or "Black Swan" events like a FlashCrash.
+        //  2.  Initial Price Stability: Since the simulation starts at a user-defined initial_price, starting sideways ensures that the very first few thousand ticks establish a solid "baseline" price. If the simulation started immediately with a FlashCrash or a high-momentum Bullish run, the strategy might trigger extreme entry orders before it has even established what "normal" market behavior looks like.
+        //  3.  Order Book Baseline: In hftbacktest, the simulator needs to process some initial trades to build a realistic picture of the recent price action. A "quiet start" mimics a period of price discovery or a calm market opening, which is generally safer for testing the basic health of a trading bot.
         let mut available_themes: Vec<_> = budgets.keys().cloned().collect();
         available_themes.sort();
 
@@ -102,10 +107,11 @@ impl MarkovGenerator {
             let theme_events = self.generate_theme_events(state, current_theme, segment_len);
 
             println!(
-                " - [{:?}] generated {} ticks ({} remaining for theme)",
+                " - [{:?}] generated {} ticks ({} remaining for theme). Final Px: {:.2}",
                 current_theme,
                 theme_events.len(),
-                budgets[&current_theme] - theme_events.len()
+                budgets[&current_theme] - theme_events.len(),
+                state.last_price
             );
 
             let actual_len = theme_events.len();
@@ -202,6 +208,7 @@ impl MarkovGenerator {
             .starting_price_f64(state.last_price)
             .volatility_f64(params.volatility)
             .trend_f64(params.direction, params.trend)
+            .base_volume(10)
             .seed(segment_seed)
             .build()
             .expect("Failed to build config");

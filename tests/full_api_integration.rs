@@ -21,7 +21,7 @@ fn test_end_to_end_pipeline() {
 
     let total_ticks = 50_000;
     let tick_size = 0.25;
-    let price_scale = 1.0;
+    let price_scale = 100.0;
     let seed = 12345;
 
     // 1. Build a complex scenario using the public Builder API
@@ -35,8 +35,8 @@ fn test_end_to_end_pipeline() {
         .build()
         .expect("Failed to build scenario");
 
-    // 2. Initialize the public MarketState
-    let mut state = MarketState::new(1000.0, 1672531200000, seed);
+    // 2. Initialize the public MarketState at a specific date
+    let mut state = MarketState::at_date(2023, 1, 1, 1000.0, seed);
 
     // 3. Execute the public MarkovGenerator
     let generator = MarkovGenerator::new(tick_size, price_scale);

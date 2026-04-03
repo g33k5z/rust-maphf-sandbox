@@ -25,57 +25,57 @@ pub struct ThemeParams {
 impl ThemeParams {
     /// Medium-volatility, low-drift upward behavior.
     pub const BULLISH: Self = Self {
-        volatility: 0.005,
-        trend: 0.0002,
+        volatility: 5e-6,
+        trend: 1e-8,
         direction: TrendDirection::Bullish,
     };
 
     /// High-volatility, medium-drift downward behavior.
     pub const BEARISH: Self = Self {
-        volatility: 0.008,
-        trend: 0.0005,
+        volatility: 8e-6,
+        trend: 2e-8,
         direction: TrendDirection::Bearish,
     };
 
     /// Very low volatility, zero-drift behavior.
     pub const SIDEWAYS: Self = Self {
-        volatility: 0.001,
+        volatility: 2e-6,
         trend: 0.0,
         direction: TrendDirection::Sideways,
     };
 
     /// Extreme-volatility, aggressive downward behavior for flash crashes.
     pub const FLASH_CRASH_PLUNGE: Self = Self {
-        volatility: 0.08,
-        trend: 0.03,
+        volatility: 1e-4,
+        trend: 5e-6,
         direction: TrendDirection::Bearish,
     };
 
     /// Extreme-volatility, aggressive upward recovery for flash crashes.
     pub const FLASH_CRASH_SNAPBACK: Self = Self {
-        volatility: 0.06,
-        trend: 0.025,
+        volatility: 8e-5,
+        trend: 4e-6,
         direction: TrendDirection::Bullish,
     };
 
     /// Moderate-volatility, steady sell-off for market corrections.
     pub const CORRECTION_SLIDE: Self = Self {
-        volatility: 0.015,
-        trend: 0.004,
+        volatility: 2e-5,
+        trend: 5e-7,
         direction: TrendDirection::Bearish,
     };
 
     /// Low-volatility, stagnant period at the bottom of a correction.
     pub const CORRECTION_BOTTOM: Self = Self {
-        volatility: 0.002,
+        volatility: 5e-6,
         trend: 0.0,
         direction: TrendDirection::Sideways,
     };
 
     /// Moderate-volatility recovery from a correction.
     pub const CORRECTION_RECOVER: Self = Self {
-        volatility: 0.012,
-        trend: 0.003,
+        volatility: 1e-5,
+        trend: 3e-7,
         direction: TrendDirection::Bullish,
     };
 }

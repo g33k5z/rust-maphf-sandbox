@@ -3,6 +3,7 @@
 //! This module defines the common language used across the library to track market state
 //! and represent high-level thematic behaviors.
 
+use chrono::{TimeZone, Utc};
 pub use market_data_source::TrendDirection;
 
 /// # Market Continuity State
@@ -35,6 +36,24 @@ impl MarketState {
             base_seed,
             segment_count: 0,
         }
+    }
+
+    /// Initializes a new market state starting at 00:00:00 on a specific date.
+    ///
+    /// # Parameters
+    /// - `year`, `month`, `day`: The calendar date.
+    /// - `initial_price`: Starting price.
+    /// - `base_seed`: Root seed.
+    ///
+    /// # Panics
+    /// Panics if the provided date is invalid.
+    pub fn at_date(year: i32, month: u32, day: u32, initial_price: f64, base_seed: u64) -> Self {
+        let dt = Utc
+            .with_ymd_and_hms(year, month, day, 0, 0, 0)
+            .single()
+            .expect("Invalid date or ambiguous time");
+
+        Self::new(initial_price, dt.timestamp_millis(), base_seed)
     }
 }
 
