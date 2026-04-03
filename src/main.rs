@@ -21,11 +21,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let tick_size = 0.25;
     let price_scale = 100.0;
-    let total_ticks = 1_000_000;
+    let total_ticks = 10_000_000;
 
     // Defining the Market
     let scenario = ScenarioBuilder::new(total_ticks)
-        .seed(42)
+        .seed(67)
         .segment_range(5_000, 20_000)
         .add_theme(MarketTheme::Bullish, 0.25) // 25% of time is upward drift
         .add_theme(MarketTheme::Sideways, 0.50) // 50% of time is consolidation
@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    save_as_npz(&all_events, "output/data/mes_1m_dynamic.npz")?;
+    // save_as_npz(&all_events, "output/data/mes_1m_dynamic.npz")?;
 
     println!(
         "Successfully generated and saved {} total events.",

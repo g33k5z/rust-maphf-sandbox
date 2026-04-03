@@ -208,6 +208,7 @@ impl MarkovGenerator {
             .starting_price_f64(state.last_price)
             .volatility_f64(params.volatility)
             .trend_f64(params.direction, params.trend)
+            .base_volume(10)
             .seed(segment_seed)
             .build()
             .expect("Failed to build config");
