@@ -8,17 +8,18 @@ pub mod loader;
 
 use crate::hft::loader::{load_from_bin, load_from_npz};
 use hftbacktest::backtest::assettype::LinearAsset;
-use hftbacktest::backtest::data::DataSource;
+use hftbacktest::backtest::data::{Data, DataSource};
 use hftbacktest::backtest::models::{
     CommonFees, ConstantLatency, PowerProbQueueFunc, ProbQueueModel, TradingValueFeeModel,
 };
 use hftbacktest::backtest::{Asset, Backtest};
 use hftbacktest::depth::HashMapMarketDepth;
 use hftbacktest::types::Event;
+use std::borrow::Cow;
 use std::path::PathBuf;
 
 /// A fluent builder for configuring an `hftbacktest` session.
-pub struct BacktestSessionBuilder {
+pub struct BacktestSessionBuilder<'a> {
     tick_size: f64,
     lot_size: f64,
     latency: i64,
@@ -27,9 +28,10 @@ pub struct BacktestSessionBuilder {
     contract_size: f64,
     data_path: Option<PathBuf>,
     is_npz: bool,
+    events: Option<Cow<'a, [Event]>>,
 }
 
-impl BacktestSessionBuilder {
+impl<'a> BacktestSessionBuilder<'a> {
     /// Creates a new builder with default Micro E-mini S&P 500 (MES) settings.
     pub fn new() -> Self {
         Self {
@@ -41,6 +43,7 @@ impl BacktestSessionBuilder {
             contract_size: 5.0, // $5 per point for MES
             data_path: None,
             is_npz: false,
+            events: None,
         }
     }
 
@@ -73,24 +76,44 @@ impl BacktestSessionBuilder {
     pub fn load_bin<P: Into<PathBuf>>(mut self, path: P) -> Self {
         self.data_path = Some(path.into());
         self.is_npz = false;
+        self.events = None;
         self
     }
 
     pub fn load_npz<P: Into<PathBuf>>(mut self, path: P) -> Self {
         self.data_path = Some(path.into());
         self.is_npz = true;
+        self.events = None;
         self
+    }
+
+    /// Loads events directly from a vector in memory.
+    pub fn load_events(mut self, events: impl Into<Cow<'a, [Event]>>) -> Self {
+        self.events = Some(events.into());
+        self.data_path = None;
+        self
+    }
+
+    fn load_data(&self) -> Result<Data<Event>, Box<dyn std::error::Error>> {
+        if let Some(events) = &self.events {
+            return Ok(Data::from_data(events));
+        }
+
+        let data_path = self
+            .data_path
+            .as_ref()
+            .ok_or("No data path or events provided")?;
+
+        if !self.is_npz {
+            return Ok(load_from_bin(data_path)?);
+        }
+
+        Ok(load_from_npz(data_path)?)
     }
 
     /// Builds a single-asset L2 backtest session.
     pub fn build(self) -> Result<Backtest<HashMapMarketDepth>, Box<dyn std::error::Error>> {
-        let data_path = self.data_path.ok_or("No data path provided")?;
-        
-        let data = if self.is_npz {
-            load_from_npz(data_path)?
-        } else {
-            load_from_bin(data_path)?
-        };
+        let data = self.load_data()?;
 
         // hftbacktest 0.9.4 ConstantLatency::new(entry_latency, response_latency)
         let latency_model = ConstantLatency::new(self.latency, self.latency);
@@ -128,7 +151,7 @@ impl BacktestSessionBuilder {
     }
 }
 
-impl Default for BacktestSessionBuilder {
+impl Default for BacktestSessionBuilder<'static> {
     fn default() -> Self {
         Self::new()
     }

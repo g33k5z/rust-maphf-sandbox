@@ -9,10 +9,10 @@
 //! 2. Generate exactly 1,000,000 events based on the desired percentages.
 //! 3. Save to output/data/ in CSV, NPZ, and BIN formats.
 
+use rust_maphf_sandbox::BacktestSessionBuilder;
 use rust_maphf_sandbox::generator::{MarketTheme, MarkovGenerator, ScenarioBuilder};
 use rust_maphf_sandbox::io::save_as_npz; //save_as_bin, save_as_csv
 use rust_maphf_sandbox::types::MarketState;
-use rust_maphf_sandbox::BacktestSessionBuilder;
 use std::fs::create_dir_all;
 
 /// Main entry point for the simulation.
@@ -63,9 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    // save_as_csv(&all_events, "output/data/mes_1m_dynamic.csv")?;
     save_as_npz(&all_events, "output/data/mes_1m_dynamic.npz")?;
-    // save_as_bin(&all_events, "output/data/mes_1m_dynamic.bin")?;
 
     println!(
         "Successfully generated and saved {} total events.",
@@ -76,15 +74,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut backtest = BacktestSessionBuilder::new()
         .tick_size(tick_size * price_scale)
         .contract_size(5.0 / price_scale)
-        .load_npz("output/data/mes_1m_dynamic.npz")
+        .load_events(&all_events) // or from file .load_npz("output/data/mes_1m_dynamic.npz")
         .build()?;
 
     println!("Running backtest simulation (Trade-only)...");
 
     use hftbacktest::depth::MarketDepth;
     use hftbacktest::prelude::Bot;
-    // Advance backtest until end of data (using 1 hour as a safe duration for 100k events)
-    let result = backtest.elapse(3600 * 1_000_000_000);
+    // Advance backtest until end of data
+    let result = backtest.goto_end();
     println!("Backtest complete with result: {:?}", result);
 
     let last_price = backtest.depth(0).best_bid();
@@ -97,6 +95,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             println!("Final Last Trade Qty: {:.2}", last_trade.qty);
             println!("Final Last Trade ev: 0x{:x}", last_trade.ev);
+            println!("Total Tades: {}", backtest.last_trades(0).len());
         } else {
             println!("No trades processed.");
         }
