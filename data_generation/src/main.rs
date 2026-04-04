@@ -9,10 +9,11 @@
 //! 2. Generate exactly 1,000,000 events based on the desired percentages.
 //! 3. Save to output/data/ in CSV, NPZ, and BIN formats.
 
+use hftbacktest::types::{BUY_EVENT, SELL_EVENT};
+use rust_maphf_sandbox::BacktestSessionBuilder;
 use rust_maphf_sandbox::generator::{MarketTheme, MarkovGenerator, ScenarioBuilder};
 use rust_maphf_sandbox::types::MarketState;
 use rust_maphf_sandbox::ui;
-use rust_maphf_sandbox::BacktestSessionBuilder;
 use std::fs::create_dir_all;
 
 /// Main entry point for the simulation.
@@ -41,16 +42,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let generator = MarkovGenerator::new(tick_size, price_scale);
 
     ui::print_generation_start(total_ticks);
-    let all_events = generator.generate(&scenario, &mut state);
+    let mut all_events = generator.generate(&scenario, &mut state);
 
-    // ui::print_event_preview(&all_events);
+    use hftbacktest::types::DEPTH_EVENT;
+
+    let mut enriched_events = Vec::with_capacity(all_events.len() * 2);
+
+    for ev in all_events.drain(..) {
+        let mut bid = ev.clone();
+        bid.ev = DEPTH_EVENT | BUY_EVENT;
+        bid.px -= tick_size; // Offset slightly to create a spread
+
+        let mut ask = ev.clone();
+        ask.ev = DEPTH_EVENT | SELL_EVENT;
+        ask.px += tick_size;
+
+        enriched_events.push(bid);
+        enriched_events.push(ask);
+        enriched_events.push(ev); // Keep the original trade event
+    }
+
+    ui::print_event_preview(&all_events);
     ui::print_generation_summary(all_events.len());
 
     ui::print_backtest_init();
     let mut backtest = BacktestSessionBuilder::new()
         .tick_size(tick_size * price_scale)
         .contract_size(5.0 / price_scale)
-        .load_events(&all_events)
+        .load_events(&enriched_events)
         .build()?;
 
     ui::print_backtest_start();

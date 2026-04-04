@@ -66,3 +66,41 @@ pub fn print_backtest_results(backtest: &Backtest<HashMapMarketDepth>) {
         println!("Final Best Bid: {:.2}", last_price);
     }
 }
+
+pub fn display_depth(depth: &HashMapMarketDepth, levels: usize) {
+    println!("  Asks:");
+    let best_ask_tick = depth.best_ask_tick;
+    let best_bid_tick = depth.best_bid_tick;
+
+    if best_ask_tick < i64::MAX {
+        for i in (0..levels).rev() {
+            let tick = best_ask_tick + i as i64;
+            if let Some(&qty) = depth.ask_depth.get(&tick) {
+                println!("    {:<10.2}: {:>10.2}", tick as f64 * depth.tick_size, qty);
+            }
+        }
+    } else {
+        println!("    (No Ask Liquidity)");
+    }
+
+    let best_bid = depth.best_bid();
+    let best_ask = depth.best_ask();
+    let mid_price = if !best_bid.is_nan() && !best_ask.is_nan() {
+        (best_bid + best_ask) / 2.0
+    } else {
+        f64::NAN
+    };
+    println!("  ------ Mid: {:.2} ------", mid_price);
+    println!("  Bids:");
+
+    if best_bid_tick > i64::MIN {
+        for i in 0..levels {
+            let tick = best_bid_tick - i as i64;
+            if let Some(&qty) = depth.bid_depth.get(&tick) {
+                println!("    {:<10.2}: {:>10.2}", tick as f64 * depth.tick_size, qty);
+            }
+        }
+    } else {
+        println!("    (No Bid Liquidity)");
+    }
+}

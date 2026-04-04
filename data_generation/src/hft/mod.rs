@@ -39,7 +39,7 @@ impl<'a> BacktestSessionBuilder<'a> {
         Self {
             tick_size: 0.25,
             lot_size: 1.0,
-            latency: 1_000_000, // 1ms
+            latency: 0,
             maker_fee: 0.0,
             taker_fee: 0.0,
             contract_size: 5.0, // $5 per point for MES
